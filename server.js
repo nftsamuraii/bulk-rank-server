@@ -5,6 +5,7 @@ const ffmpeg  = require('fluent-ffmpeg');
 const path    = require('path');
 const fs      = require('fs');
 const os      = require('os');
+const { execSync } = require('child_process');
 
 const app    = express();
 const upload = multer({ dest: os.tmpdir() });
@@ -12,8 +13,6 @@ const upload = multer({ dest: os.tmpdir() });
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── POST /convert  ────────────────────────────────────────
-// Receives a webm file, returns mp4 with bt709 color space
 app.post('/convert', upload.single('video'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
@@ -21,7 +20,6 @@ app.post('/convert', upload.single('video'), (req, res) => {
   const outputPath = inputPath + '.mp4';
 
   // Check if input has audio
-  const { execSync } = require('child_process');
   let hasAudio = false;
   try {
     const probe = execSync(`ffprobe -v quiet -print_format json -show_streams "${inputPath}"`).toString();
@@ -29,12 +27,7 @@ app.post('/convert', upload.single('video'), (req, res) => {
     hasAudio = streams.some(s => s.codec_type === 'audio');
   } catch(e) {}
 
-  const audioOpts = hasAudio
-    ? ['-c:a aac', '-b:a 192k']
-    : ['-f lavfi', '-i anullsrc=channel_layout=stereo:sample_rate=44100', '-c:a aac', '-b:a 128k', '-shortest'];
-
-  ffmpeg()
-    .input(inputPath)
+  const cmd = ffmpeg(inputPath)
     .outputOptions([
       '-c:v libx264',
       '-preset fast',
@@ -47,8 +40,17 @@ app.post('/convert', upload.single('video'), (req, res) => {
       '-color_trc bt709',
       '-colorspace bt709',
       '-movflags +faststart',
-      ...audioOpts,
-    ])
+    ]);
+
+  if (hasAudio) {
+    cmd.outputOptions(['-c:a aac', '-b:a 192k']);
+  } else {
+    cmd.input('anullsrc=channel_layout=stereo:sample_rate=44100')
+       .inputFormat('lavfi')
+       .outputOptions(['-c:a aac', '-b:a 128k', '-shortest']);
+  }
+
+  cmd
     .output(outputPath)
     .on('end', () => {
       res.setHeader('Content-Type', 'video/mp4');
