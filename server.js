@@ -20,10 +20,21 @@ app.post('/convert', upload.single('video'), (req, res) => {
   const inputPath  = req.file.path;
   const outputPath = inputPath + '.mp4';
 
+  // Check if input has audio
+  const { execSync } = require('child_process');
+  let hasAudio = false;
+  try {
+    const probe = execSync(`ffprobe -v quiet -print_format json -show_streams "${inputPath}"`).toString();
+    const streams = JSON.parse(probe).streams;
+    hasAudio = streams.some(s => s.codec_type === 'audio');
+  } catch(e) {}
+
+  const audioOpts = hasAudio
+    ? ['-c:a aac', '-b:a 192k']
+    : ['-f lavfi', '-i anullsrc=channel_layout=stereo:sample_rate=44100', '-c:a aac', '-b:a 128k', '-shortest'];
+
   ffmpeg()
     .input(inputPath)
-    .input('anullsrc=channel_layout=stereo:sample_rate=44100')
-    .inputFormat('lavfi')
     .outputOptions([
       '-c:v libx264',
       '-preset fast',
@@ -35,10 +46,8 @@ app.post('/convert', upload.single('video'), (req, res) => {
       '-color_primaries bt709',
       '-color_trc bt709',
       '-colorspace bt709',
-      '-c:a aac',
-      '-b:a 128k',
-      '-shortest',
       '-movflags +faststart',
+      ...audioOpts,
     ])
     .output(outputPath)
     .on('end', () => {
