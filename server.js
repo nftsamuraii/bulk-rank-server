@@ -20,7 +20,10 @@ app.post('/convert', upload.single('video'), (req, res) => {
   const inputPath  = req.file.path;
   const outputPath = inputPath + '.mp4';
 
-  ffmpeg(inputPath)
+  ffmpeg()
+    .input(inputPath)
+    .input('anullsrc=channel_layout=stereo:sample_rate=44100')
+    .inputFormat('lavfi')
     .outputOptions([
       '-c:v libx264',
       '-preset fast',
@@ -32,8 +35,10 @@ app.post('/convert', upload.single('video'), (req, res) => {
       '-color_primaries bt709',
       '-color_trc bt709',
       '-colorspace bt709',
+      '-c:a aac',
+      '-b:a 128k',
+      '-shortest',
       '-movflags +faststart',
-      '-an',           // no audio track needed
     ])
     .output(outputPath)
     .on('end', () => {
