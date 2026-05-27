@@ -519,7 +519,24 @@ async function generateVideo() {
   document.getElementById('emptyState').style.display = 'none';
   canvas.style.display = 'block';
 
-  const stream = canvas.captureStream(60);
+  // Capture canvas video stream
+  const canvasStream = canvas.captureStream(60);
+
+  // Capture audio from background video
+  let stream;
+  try {
+    const audioCtx = new AudioContext();
+    const source = audioCtx.createMediaElementSource(bgVideoEl);
+    const dest = audioCtx.createMediaStreamDestination();
+    source.connect(dest);
+    source.connect(audioCtx.destination); // keep playing through speakers
+    const audioTrack = dest.stream.getAudioTracks()[0];
+    const videoTrack = canvasStream.getVideoTracks()[0];
+    stream = new MediaStream([videoTrack, audioTrack]);
+  } catch(e) {
+    console.warn('Audio capture failed, using video only:', e);
+    stream = canvasStream;
+  }
   recordedChunks = [];
 
   const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
