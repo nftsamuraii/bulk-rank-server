@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BULK Rank Card Editor</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;500;600;700&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'BULK';
+      src: url('https://raw.githubusercontent.com/nftsamuraii/-bulk-pnl-generator/main/BULK-Medium.otf') format('opentype');
+      font-weight: 500; font-style: normal; font-display: swap;
+    }
+    @font-face {
+      font-family: 'BULK';
+      src: url('https://raw.githubusercontent.com/nftsamuraii/-bulk-pnl-generator/main/BULK-Regular.otf') format('opentype');
+      font-weight: 400; font-style: normal; font-display: swap;
+    }
+    @font-face {
+      font-family: 'Terminal Grotesque';
+      src: url('https://raw.githubusercontent.com/nftsamuraii/-bulk-pnl-generator/main/assets/terminal-grotesque-webfont.woff2') format('woff2');
+      font-weight: normal; font-style: normal; font-display: swap;
+    }
+    :root { --bg:#0a0a0a; --card:#121212; --border:#2a2a2a; --gold:#c8b882; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:#fff; font-family:'IBM Plex Sans',sans-serif; min-height:100vh; padding:20px; }
+    .container { max-width:1100px; margin:0 auto; display:flex; gap:30px; flex-wrap:wrap; }
+    .panel { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; flex:1; min-width:300px; }
+    h2 { font-family:'Playfair Display',serif; font-size:14px; letter-spacing:3px; color:var(--gold); margin-bottom:16px; text-transform:uppercase; }
+    .field { margin-bottom:14px; }
+    .field label { display:block; font-size:11px; letter-spacing:2px; color:#888; text-transform:uppercase; margin-bottom:7px; }
+    .field input { width:100%; background:#1e1e1e; border:1px solid var(--border); border-radius:8px; color:#fff; font-family:'IBM Plex Sans',sans-serif; font-size:14px; padding:11px 14px; outline:none; transition:border-color 0.2s; }
+    .field input:focus { border-color:var(--gold); }
+    .fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+    .fields-grid .field { margin-bottom:0; }
+    .upload-zone { width:100%; padding:20px; background:#1a1a1a; border:2px dashed #333; border-radius:12px; text-align:center; cursor:pointer; transition:all 0.2s; margin-bottom:16px; position:relative; display:block; }
+    .upload-zone:hover { border-color:var(--gold); background:#1e1c18; }
+    .upload-zone.has-file { border-style:solid; border-color:var(--gold); }
+    .upload-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+    .upload-zone .icon { font-size:24px; margin-bottom:4px; }
+    .upload-zone p { color:#666; font-size:12px; letter-spacing:1px; line-height:1.6; }
+    .loaded { color:var(--gold); font-size:13px; font-weight:500; }
+    .bg-preview { width:100%; height:100px; border-radius:8px; margin-bottom:8px; background-size:cover; background-position:center; display:none; }
+    .preview-wrap { display:flex; flex-direction:column; align-items:center; }
+    .preview-empty { width:100%; max-width:380px; height:440px; background:#1a1a1a; border:2px dashed var(--border); border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#555; font-size:13px; text-align:center; gap:12px; }
+    .preview-empty .icon { font-size:48px; opacity:0.4; }
+    #rankCanvas { max-width:100%; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.5); display:none; }
+    .btn-generate { width:100%; padding:14px; margin-top:20px; background:linear-gradient(135deg,#c8b882 0%,#a89862 100%); border:none; border-radius:8px; color:#0a0a0a; font-family:'Playfair Display',serif; font-size:16px; font-weight:600; letter-spacing:3px; cursor:pointer; transition:all 0.2s; }
+    .btn-generate:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(200,184,130,0.3); }
+    .btn-generate:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+    .btn-action { width:100%; padding:12px; margin-top:10px; background:transparent; border:1px solid var(--gold); border-radius:8px; color:var(--gold); font-family:'Playfair Display',serif; font-size:14px; letter-spacing:2px; cursor:pointer; opacity:0; pointer-events:none; transition:all 0.2s; }
+    .btn-action.visible { opacity:1; pointer-events:auto; }
+    .btn-action:hover { background:rgba(200,184,130,0.08); }
+    .status-box { background:#1a1a1a; border:1px solid #2a2a2a; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:12px; color:#888; line-height:1.7; display:none; }
+    .status-box.show { display:block; }
+    .status-box.success { border-color:rgba(0,232,162,0.3); color:#00e8a2; }
+    .status-box.error { border-color:rgba(255,64,96,0.3); color:#ff4060; }
+  </style>
+</head>
+<body>
+  <header style="max-width:1100px;margin:0 auto 28px;display:flex;align-items:center;justify-content:center;padding:20px 0;">
+    <span style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#c8b882;letter-spacing:6px;">BULK RANK</span>
+  </header>
+
+  <div class="container">
+    <div class="panel">
+      <h2>Step 1 — Original Screenshot</h2>
+      <label class="upload-zone" id="origZone">
+        <input type="file" accept="image/*" onchange="loadOriginal(event)">
+        <div class="icon">📊</div>
+        <p id="origLabel">Upload your BULK leaderboard screenshot<br><span style="color:#555;font-size:10px;">AI will automatically read all stats</span></p>
+      </label>
+
+      <div class="status-box" id="statusBox">Analyzing...</div>
+
+      <h2>Step 2 — New Background</h2>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button onclick="switchMode('photo')" id="btnModePhoto" style="flex:1;padding:8px;border-radius:8px;border:1px solid #c8b882;background:#c8b882;color:#0a0a0a;font-family:'IBM Plex Sans',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">📷 PHOTO</button>
+        <button onclick="switchMode('video')" id="btnModeVideo" style="flex:1;padding:8px;border-radius:8px;border:1px solid #444;background:transparent;color:#888;font-family:'IBM Plex Sans',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;">🎬 VIDEO</button>
+      </div>
+      <div id="photoMode">
+        <label class="upload-zone" id="bgZone">
+          <input type="file" accept="image/*" onchange="loadBackground(event)">
+          <div class="bg-preview" id="bgPreview"></div>
+          <div class="icon" id="bgIcon">🖼</div>
+          <p id="bgLabel">Upload a clean background photo<br><span style="color:#555;font-size:10px;">Without any text</span></p>
+        </label>
+      </div>
+      <div id="videoMode" style="display:none;">
+        <label class="upload-zone" id="videoZone">
+          <input type="file" accept="video/*" onchange="loadVideo(event)">
+          <div class="icon" id="videoIcon">🎬</div>
+          <p id="videoLabel">Upload a video as background<br><span style="color:#555;font-size:10px;">Stats will be overlaid on the video</span></p>
+        </label>
+      </div>
+
+      <h2>Stats (auto-filled)</h2>
+      <div class="field">
+        <label># Global Rank</label>
+        <input type="text" id="rankNum" placeholder="Analyzing..." value="">
+      </div>
+      <div class="fields-grid">
+        <div class="field"><label>Cashflow ROI</label><input type="text" id="rankRoi" placeholder="Analyzing..." value=""></div>
+        <div class="field"><label>Net Realized PnL</label><input type="text" id="rankPnl" placeholder="Analyzing..." value=""></div>
+        <div class="field"><label>Total Volume</label><input type="text" id="rankVol" placeholder="Analyzing..." value=""></div>
+        <div class="field"><label>Win Rate</label><input type="text" id="rankWin" placeholder="Analyzing..." value=""></div>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="text" id="rankDate" placeholder="Analyzing..." value="">
+      </div>
+    </div>
+
+    <div class="panel preview-wrap">
+      <h2>Preview</h2>
+      <div class="preview-empty" id="emptyState">
+        <span class="icon">🏆</span>
+        <span>Upload screenshot & background<br>then hit Generate</span>
+      </div>
+      <canvas id="rankCanvas"></canvas>
+      <button class="btn-generate" id="btnGenerate" onclick="handleGenerate()">GENERATE</button>
+      <button class="btn-action" id="btnDownload" onclick="downloadCard()">⬇ DOWNLOAD</button>
+      <button class="btn-action visible" id="btnDownloadVideo" onclick="downloadVideo()" style="display:none;">⬇ DOWNLOAD VIDEO</button>
+      <button class="btn-action" id="btnCopy" onclick="copyCard()">📋 COPY</button>
+    </div>
+  </div>
+
+<script>
+let origDataUrl = null;
+let bgDataUrl = null;
+let bgPixels = null;
+
+function loadOriginal(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    origDataUrl = ev.target.result;
+    document.getElementById('origZone').classList.add('has-file');
+    document.getElementById('origLabel').innerHTML = '<span class="loaded">✓ ' + file.name + '</span><br><span style="color:#555;font-size:10px;">Analyzing with AI...</span>';
+    e.target.value = '';
+    analyzeScreenshot(origDataUrl);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeScreenshot(dataUrl) {
+  const statusBox = document.getElementById('statusBox');
+  statusBox.className = 'status-box show';
+  statusBox.textContent = '⏳ Analyzing screenshot...';
+
+  try {
+    const mediaType = dataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
+    const base64 = dataUrl.split(',')[1];
+
+    const response = await fetch('https://bulk-rank-api.vercel.app/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mediaType: mediaType })
+    });
+
+    const data = await response.json();
+    const text = (data.content?.find(c => c.type === 'text') || data.content?.[0])?.text || '';
+
+    if (!text || text.includes('NOT_A_CARD')) throw new Error('no data');
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(text.replace(/```json[\n]?|```/g, '').trim());
+    } catch(e) {}
+
+    if (parsed) {
+      if (parsed.rank)               document.getElementById('rankNum').value = parsed.rank;
+      if (parsed.roi)                document.getElementById('rankRoi').value = parsed.roi;
+      if (parsed.pnl && parsed.rank) document.getElementById('rankPnl').value = parsed.pnl;
+      if (parsed.vol)                document.getElementById('rankVol').value = parsed.vol;
+      if (parsed.winRate)            document.getElementById('rankWin').value = parsed.winRate;
+      if (parsed.date)               document.getElementById('rankDate').value = parsed.date;
+    }
+
+    const rankMatch    = text.match(/#\s*(\d+)/);
+    const roiMatch     = text.match(/([+-]\d+\.?\d*%)/);
+    const dollarMatches = [...text.matchAll(/\$[\d,]+\.?\d*[KMBkm]?/g)].map(m => m[0]);
+    const pctMatch     = text.match(/(\d+)%/);
+
+    if (rankMatch)          document.getElementById('rankNum').value = '#' + rankMatch[1];
+    if (roiMatch)           document.getElementById('rankRoi').value = roiMatch[1];
+    if (dollarMatches[0])   document.getElementById('rankPnl').value = dollarMatches[0];
+    if (dollarMatches[1])   document.getElementById('rankVol').value = dollarMatches[1];
+    if (pctMatch && !roiMatch) document.getElementById('rankWin').value = pctMatch[1] + '%';
+
+    statusBox.className = 'status-box show success';
+    statusBox.textContent = '✓ Done! Check and edit values below if needed.';
+
+  } catch(e) {
+    statusBox.className = 'status-box show error';
+    statusBox.textContent = '⚠ Could not analyze. Fill stats manually below.';
+  }
+}
+
+function loadBackground(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    bgDataUrl = ev.target.result;
+    const tmpImg = new Image();
+    tmpImg.onload = () => {
+      const tmp = document.createElement('canvas');
+      tmp.width = tmpImg.naturalWidth; tmp.height = tmpImg.naturalHeight;
+      const tCtx = tmp.getContext('2d');
+      tCtx.drawImage(tmpImg, 0, 0);
+      bgPixels = tCtx.getImageData(0, 0, tmp.width, tmp.height);
+    };
+    tmpImg.src = ev.target.result;
+    const preview = document.getElementById('bgPreview');
+    preview.style.backgroundImage = 'url(' + ev.target.result + ')';
+    preview.style.display = 'block';
+    document.getElementById('bgIcon').style.display = 'none';
+    document.getElementById('bgLabel').innerHTML = '<span class="loaded">✓ ' + file.name + '</span><br><span style="color:#555;font-size:10px;">Click to change</span>';
+    document.getElementById('bgZone').classList.add('has-file');
+    e.target.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function generateCard() {
+  if (!bgDataUrl) { alert('Please upload a background photo!'); return; }
+  if (!bgPixels)  { alert('Background still loading, wait a moment...'); return; }
+
+  try {
+    await Promise.race([
+      Promise.all([
+        document.fonts.load('400 72px "Terminal Grotesque"'),
+        document.fonts.load('500 14px "BULK"'),
+        document.fonts.load('400 18px "IBM Plex Sans"'),
+      ]),
+      new Promise((_,r) => setTimeout(r, 3000))
+    ]);
+  } catch(e) {}
+
+  const rankNum = document.getElementById('rankNum').value || '#1';
+  const roi     = document.getElementById('rankRoi').value || '+0%';
+  const pnl     = document.getElementById('rankPnl').value || '$0';
+  const vol     = document.getElementById('rankVol').value || '$0';
+  const win     = document.getElementById('rankWin').value || '0%';
+
+  const canvas = document.getElementById('rankCanvas');
+  const ctx    = canvas.getContext('2d');
+  const W = 762, H = 824;
+  canvas.width = W; canvas.height = H;
+
+  // Draw background scaled to 762x824
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = bgPixels.width; tmpCanvas.height = bgPixels.height;
+  tmpCanvas.getContext('2d').putImageData(bgPixels, 0, 0);
+  ctx.drawImage(tmpCanvas, 0, 0, W, H);
+
+  // Draw BULK logo top left
+  await new Promise(resolve => {
+    const logo = new Image();
+    logo.crossOrigin = 'anonymous';
+    logo.onload = () => {
+      const logoH = Math.round(H * 0.09);
+      const logoW = Math.round(logoH * (logo.naturalWidth / logo.naturalHeight));
+      ctx.drawImage(logo, Math.round(W * 0.04), Math.round(H * 0.05), logoW, logoH);
+      resolve();
+    };
+    logo.onerror = resolve;
+    logo.src = 'https://raw.githubusercontent.com/nftsamuraii/-bulk-pnl-generator/main/assets/logo_BULK.png';
+  });
+
+  // Dark gradient overlay on right so text is always readable
+  const grad = ctx.createLinearGradient(W * 0.30, 0, W, 0);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.60)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  const TX = Math.round(W * 0.952);
+
+  const RANK_FS  = Math.round(H * 0.133);
+  const VAL_FS   = Math.round(H * 0.068);
+  const LABEL_FS = Math.round(H * 0.026);
+
+  const rows = [
+    { labelText: 'Your Global Rank',      labelY: H*0.230, value: rankNum, valueY: H*0.355, valFS: RANK_FS },
+    { labelText: 'Net Realized PnL',      labelY: H*0.430, value: pnl,     valueY: H*0.498, valFS: VAL_FS  },
+    { labelText: 'Cashflow Adjusted ROI', labelY: H*0.555, value: roi,     valueY: H*0.618, valFS: VAL_FS  },
+    { labelText: 'Total Vol',             labelY: H*0.675, value: vol,     valueY: H*0.743, valFS: VAL_FS  },
+    { labelText: 'Win Rate',              labelY: H*0.798, value: win,     valueY: H*0.863, valFS: VAL_FS  },
+  ];
+
+  rows.forEach(row => {
+    // Label
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.font = '400 ' + LABEL_FS + 'px "IBM Plex Sans", sans-serif';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.90)';
+    ctx.fillText(row.labelText, TX, row.labelY);
+    ctx.restore();
+
+    // Value
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.font = '400 ' + row.valFS + 'px "Terminal Grotesque", "Share Tech Mono", monospace';
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#FAB54D';
+    ctx.fillText(row.value, TX, row.valueY);
+    ctx.restore();
+  });
+
+  // Date bottom left — from AI extracted data
+  const dateStr = document.getElementById('rankDate').value;
+  if (dateStr) {
+    const DATE_FS = Math.round(H * 0.024);
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.font = '500 ' + DATE_FS + 'px "BULK", monospace';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.fillText(dateStr, Math.round(W * 0.04), Math.round(H * 0.952));
+    ctx.restore();
+  }
+
+  document.getElementById('emptyState').style.display = 'none';
+  canvas.style.display = 'block';
+  document.getElementById('btnDownload').classList.add('visible');
+  document.getElementById('btnCopy').classList.add('visible');
+}
+
+function downloadCard() {
+  const canvas = document.getElementById('rankCanvas');
+  const btn = document.getElementById('btnDownload');
+  const orig = btn.innerHTML; btn.innerHTML = 'Saving...';
+  try {
+    const a = document.createElement('a');
+    a.download = 'bulk-rank-card.png';
+    a.href = canvas.toDataURL('image/png');
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => { btn.innerHTML = orig; }, 800);
+  } catch(e) {
+    btn.innerHTML = orig;
+    try { window.open(canvas.toDataURL('image/png'), '_blank'); }
+    catch(e2) { alert('Right-click → Save image as...'); }
+  }
+}
+
+async function copyCard() {
+  const canvas = document.getElementById('rankCanvas');
+  const btn = document.getElementById('btnCopy');
+  try {
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    btn.innerHTML = '✓ COPIED!';
+    setTimeout(() => { btn.innerHTML = '📋 COPY'; }, 2000);
+  } catch(e) {
+    try { window.open(canvas.toDataURL('image/png'), '_blank'); }
+    catch(e2) { alert('Could not copy. Try Download instead.'); }
+  }
+}
+
+// ── Smart generate dispatcher ─────────────────────────────
+let currentMode = 'photo';
+
+function handleGenerate() {
+  if (currentMode === 'video') {
+    generateVideo();
+  } else {
+    generateCard();
+  }
+}
+
+// ── Switch photo/video mode ────────────────────────────────
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('photoMode').style.display = mode === 'photo' ? 'block' : 'none';
+  document.getElementById('videoMode').style.display = mode === 'video' ? 'block' : 'none';
+  document.getElementById('btnModePhoto').style.background = mode === 'photo' ? '#c8b882' : 'transparent';
+  document.getElementById('btnModePhoto').style.color = mode === 'photo' ? '#0a0a0a' : '#888';
+  document.getElementById('btnModePhoto').style.borderColor = mode === 'photo' ? '#c8b882' : '#444';
+  document.getElementById('btnModeVideo').style.background = mode === 'video' ? '#c8b882' : 'transparent';
+  document.getElementById('btnModeVideo').style.color = mode === 'video' ? '#0a0a0a' : '#888';
+  document.getElementById('btnModeVideo').style.borderColor = mode === 'video' ? '#c8b882' : '#444';
+
+  const btnGen = document.getElementById('btnGenerate');
+  if (mode === 'video') {
+    btnGen.textContent = '🎬 GENERATE VIDEO';
+    btnGen.style.background = 'linear-gradient(135deg,#4a9eff,#2563eb)';
+  } else {
+    btnGen.textContent = 'GENERATE';
+    btnGen.style.background = 'linear-gradient(135deg,#c8b882 0%,#a89862 100%)';
+  }
+
+  // Reset download video button when switching modes
+  const dlVid = document.getElementById('btnDownloadVideo');
+  dlVid.style.display = 'none';
+}
+
+// ── Load video background ──────────────────────────────────
+let bgVideoEl = null;
+let recordedChunks = [];
+let mediaRecorder = null;
+
+function loadVideo(e) {
+  const file = e.target.files[0]; if (!file) return;
+  bgVideoEl = document.createElement('video');
+  bgVideoEl.src = URL.createObjectURL(file);
+  bgVideoEl.loop = true;
+  bgVideoEl.muted = true;
+  bgVideoEl.playsInline = true;
+  bgVideoEl.onloadedmetadata = () => {
+    document.getElementById('videoIcon').style.display = 'none';
+    document.getElementById('videoLabel').innerHTML = '<span class="loaded">✓ ' + file.name + '</span><br><span style="color:#555;font-size:10px;">Click GENERATE VIDEO below</span>';
+    document.getElementById('videoZone').classList.add('has-file');
+    document.getElementById('btnGenerateVideo').style.display = 'block';
+  };
+  e.target.value = '';
+}
+
+async function generateVideo() {
+  if (!bgVideoEl) { alert('Please upload a video first!'); return; }
+
+  const btnGen = document.getElementById('btnGenerate');
+  btnGen.disabled = true;
+  btnGen.textContent = '⏳ Generating...';
+
+  const rankNum = document.getElementById('rankNum').value || '#1';
+  const roi     = document.getElementById('rankRoi').value || '+0%';
+  const pnl     = document.getElementById('rankPnl').value || '$0';
+  const vol     = document.getElementById('rankVol').value || '$0';
+  const win     = document.getElementById('rankWin').value || '0%';
+  const dateStr = document.getElementById('rankDate').value || '';
+
+  const canvas = document.getElementById('rankCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = 762, H = 824;
+  canvas.width = W; canvas.height = H;
+
+  try {
+    await Promise.race([
+      Promise.all([
+        document.fonts.load('400 72px "Terminal Grotesque"'),
+        document.fonts.load('400 18px "IBM Plex Sans"'),
+        document.fonts.load('500 14px "BULK"'),
+      ]),
+      new Promise((_,r) => setTimeout(r, 3000))
+    ]);
+  } catch(e) {}
+
+  // Load BULK logo once
+  const logo = await new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = 'https://raw.githubusercontent.com/nftsamuraii/-bulk-pnl-generator/main/assets/logo_BULK.png';
+  });
+
+  const RANK_FS  = Math.round(H * 0.133);
+  const VAL_FS   = Math.round(H * 0.068);
+  const LABEL_FS = Math.round(H * 0.026);
+  const DATE_FS  = Math.round(H * 0.024);
+  const TX = Math.round(W * 0.952);
+
+  const rows = [
+    { labelText: 'Your Global Rank',      labelY: H*0.230, value: rankNum, valueY: H*0.355, valFS: RANK_FS },
+    { labelText: 'Net Realized PnL',      labelY: H*0.430, value: pnl,     valueY: H*0.498, valFS: VAL_FS  },
+    { labelText: 'Cashflow Adjusted ROI', labelY: H*0.555, value: roi,     valueY: H*0.618, valFS: VAL_FS  },
+    { labelText: 'Total Vol',             labelY: H*0.675, value: vol,     valueY: H*0.743, valFS: VAL_FS  },
+    { labelText: 'Win Rate',              labelY: H*0.798, value: win,     valueY: H*0.863, valFS: VAL_FS  },
+  ];
+
+  function drawFrame() {
+    ctx.drawImage(bgVideoEl, 0, 0, W, H);
+    if (logo) {
+      const logoH = Math.round(H * 0.09);
+      const logoW = Math.round(logoH * (logo.naturalWidth / logo.naturalHeight));
+      ctx.drawImage(logo, Math.round(W * 0.04), Math.round(H * 0.05), logoW, logoH);
+    }
+    const grad = ctx.createLinearGradient(W*0.30, 0, W, 0);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.60)');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+    rows.forEach(row => {
+      ctx.save(); ctx.textAlign = 'right';
+      ctx.font = '400 ' + LABEL_FS + 'px "IBM Plex Sans", sans-serif';
+      ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.90)';
+      ctx.fillText(row.labelText, TX, row.labelY); ctx.restore();
+
+      ctx.save(); ctx.textAlign = 'right';
+      ctx.font = '400 ' + row.valFS + 'px "Terminal Grotesque", "Share Tech Mono", monospace';
+      ctx.shadowColor = 'rgba(0,0,0,0.95)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
+      ctx.fillStyle = '#FAB54D';
+      ctx.fillText(row.value, TX, row.valueY); ctx.restore();
+    });
+
+    if (dateStr) {
+      ctx.save(); ctx.textAlign = 'left';
+      ctx.font = '500 ' + DATE_FS + 'px "BULK", monospace';
+      ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 8;
+      ctx.fillStyle = 'rgba(255,255,255,1)';
+      ctx.fillText(dateStr, Math.round(W*0.04), Math.round(H*0.952)); ctx.restore();
+    }
+  }
+
+  // Play video once (no loop)
+  bgVideoEl.loop = false;
+  bgVideoEl.currentTime = 0;
+  await bgVideoEl.play();
+
+  document.getElementById('emptyState').style.display = 'none';
+  canvas.style.display = 'block';
+
+  const stream = canvas.captureStream(60);
+  recordedChunks = [];
+
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+    ? 'video/webm;codecs=vp9'
+    : MediaRecorder.isTypeSupported('video/webm')
+    ? 'video/webm'
+    : 'video/mp4';
+
+  mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 20_000_000 });
+  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    bgVideoEl.loop = true;
+    bgVideoEl.pause();
+    const dlBtn = document.getElementById('btnDownloadVideo');
+    dlBtn.style.display = 'block';
+    dlBtn.classList.add('visible');
+    btnGen.disabled = false;
+    btnGen.textContent = '🎬 GENERATE VIDEO';
+    // Store mime for download
+    window._videoMime = mimeType;
+  };
+
+  // Auto-stop when video ends — one full loop recorded
+  bgVideoEl.onended = () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+    }
+  };
+
+  mediaRecorder.start();
+
+  function animate() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      drawFrame(); requestAnimationFrame(animate);
+    }
+  }
+  animate();
+}
+
+async function downloadVideo() {
+  const btn = document.getElementById('btnDownloadVideo');
+  btn.textContent = '⏳ Converting to MP4...';
+  btn.disabled = true;
+
+  try {
+    const mime = window._videoMime || 'video/webm';
+    const blob = new Blob(recordedChunks, { type: mime });
+
+    const formData = new FormData();
+    formData.append('video', blob, 'recording.webm');
+
+    const response = await fetch('/convert', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error('Server error: ' + response.status);
+
+    const mp4Blob = await response.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(mp4Blob);
+    a.download = 'bulk-rank-video.mp4';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+
+  } catch (err) {
+    console.error(err);
+    alert('Could not convert to MP4. Downloading as WebM instead.');
+    const mime = window._videoMime || 'video/webm';
+    const blob = new Blob(recordedChunks, { type: mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'bulk-rank-video.webm';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } finally {
+    btn.textContent = '⬇ DOWNLOAD VIDEO';
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items; if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        origDataUrl = ev.target.result;
+        document.getElementById('origZone').classList.add('has-file');
+        document.getElementById('origLabel').innerHTML = '<span class="loaded">✓ Image pasted</span><br><span style="color:#555;font-size:10px;">Analyzing with AI...</span>';
+        analyzeScreenshot(ev.target.result);
+      };
+      reader.readAsDataURL(items[i].getAsFile());
+      e.preventDefault(); break;
+    }
+  }
+});
+</script>
+</body>
+</html>
