@@ -333,8 +333,12 @@ async function generateCard() {
 
   document.getElementById('emptyState').style.display = 'none';
   canvas.style.display = 'block';
-  document.getElementById('btnDownload').classList.add('visible');
-  document.getElementById('btnCopy').classList.add('visible');
+  const dlBtn = document.getElementById('btnDownload');
+  dlBtn.style.display = 'block';
+  dlBtn.classList.add('visible');
+  const cpBtn = document.getElementById('btnCopy');
+  cpBtn.style.display = 'block';
+  cpBtn.classList.add('visible');
 }
 
 function downloadCard() {
