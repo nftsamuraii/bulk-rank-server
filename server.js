@@ -46,7 +46,7 @@ app.post('/convert', upload.single('video'), (req, res) => {
       '-b:v 14M',
       '-maxrate 18M',
       '-bufsize 36M',
-      '-vf scale=760:824,format=yuv420p',
+      '-vf crop=ih*760/824:ih,scale=760:824,format=yuv420p',
       '-color_primaries bt709',
       '-color_trc bt709',
       '-colorspace bt709',
