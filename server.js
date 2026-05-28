@@ -12,7 +12,6 @@ const upload = multer({ dest: os.tmpdir() });
 
 app.use(cors());
 
-// Set permissive CSP to allow canvas, WebAudio, MediaRecorder
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy',
     "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; " +
@@ -30,23 +29,28 @@ app.post('/convert', upload.single('video'), (req, res) => {
   const inputPath  = req.file.path;
   const outputPath = inputPath + '.mp4';
 
-  // Check if input has audio
   let hasAudio = false;
   try {
     const probe = execSync(`ffprobe -v quiet -print_format json -show_streams "${inputPath}"`).toString();
     const streams = JSON.parse(probe).streams;
     hasAudio = streams.some(s => s.codec_type === 'audio');
-  } catch(e) {}
+    console.log('hasAudio:', hasAudio);
+  } catch(e) {
+    console.error('probe error:', e.message);
+  }
+
+  // Safe crop: scale to cover 760x824 then crop center, force even dimensions
+  const vf = 'scale=760:824:force_original_aspect_ratio=increase,crop=760:824,format=yuv420p';
 
   const cmd = ffmpeg(inputPath)
     .outputOptions([
       '-c:v libx264',
-      '-preset medium',
+      '-preset fast',
       '-crf 14',
       '-b:v 14M',
       '-maxrate 18M',
       '-bufsize 36M',
-      '-vf crop=ih*760/824:ih,scale=760:824,format=yuv420p',
+      `-vf ${vf}`,
       '-color_primaries bt709',
       '-color_trc bt709',
       '-colorspace bt709',
@@ -63,7 +67,9 @@ app.post('/convert', upload.single('video'), (req, res) => {
 
   cmd
     .output(outputPath)
+    .on('start', cmd => console.log('ffmpeg started:', cmd))
     .on('end', () => {
+      console.log('ffmpeg done');
       res.setHeader('Content-Type', 'video/mp4');
       res.setHeader('Content-Disposition', 'attachment; filename="bulk-rank-video.mp4"');
       const stream = fs.createReadStream(outputPath);
@@ -74,7 +80,7 @@ app.post('/convert', upload.single('video'), (req, res) => {
       });
     })
     .on('error', err => {
-      console.error('ffmpeg error:', err);
+      console.error('ffmpeg error:', err.message);
       fs.unlink(inputPath, () => {});
       res.status(500).json({ error: 'Conversion failed: ' + err.message });
     })
