@@ -46,11 +46,12 @@
     .preview-empty { width:100%; max-width:380px; height:440px; background:#1a1a1a; border:2px dashed var(--border); border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#555; font-size:13px; text-align:center; gap:12px; }
     .preview-empty .icon { font-size:48px; opacity:0.4; }
     #rankCanvas { max-width:100%; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.5); display:none; }
-    .btn-generate { width:100%; padding:14px; margin-top:20px; background:linear-gradient(135deg,#c8b882 0%,#a89862 100%); border:none; border-radius:8px; color:#0a0a0a; font-family:'Playfair Display',serif; font-size:16px; font-weight:600; letter-spacing:3px; cursor:pointer; transition:all 0.2s; }
+    .btn-generate { width:100%; padding:14px; margin-top:0; background:linear-gradient(135deg,#c8b882 0%,#a89862 100%); border:none; border-radius:8px; color:#0a0a0a; font-family:'Playfair Display',serif; font-size:16px; font-weight:600; letter-spacing:3px; cursor:pointer; transition:all 0.2s; }
     .btn-generate:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(200,184,130,0.3); }
     .btn-generate:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
-    .btn-action { width:100%; padding:12px; margin-top:10px; background:transparent; border:1px solid var(--gold); border-radius:8px; color:var(--gold); font-family:'Playfair Display',serif; font-size:14px; letter-spacing:2px; cursor:pointer; opacity:0; pointer-events:none; transition:all 0.2s; }
+    .btn-action { width:100%; padding:12px; margin-top:0; background:transparent; border:1px solid var(--gold); border-radius:8px; color:var(--gold); font-family:'Playfair Display',serif; font-size:14px; letter-spacing:2px; cursor:pointer; opacity:0; pointer-events:none; transition:all 0.2s; }
     .btn-action.visible { opacity:1; pointer-events:auto; }
+    .btn-group { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
     .btn-action:hover { background:rgba(200,184,130,0.08); }
     .status-box { background:#1a1a1a; border:1px solid #2a2a2a; border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:12px; color:#888; line-height:1.7; display:none; }
     .status-box.show { display:block; }
@@ -119,10 +120,12 @@
         <span>Upload screenshot & background<br>then hit Generate</span>
       </div>
       <canvas id="rankCanvas"></canvas>
-      <button class="btn-generate" id="btnGenerate" onclick="handleGenerate()">GENERATE</button>
-      <button class="btn-action" id="btnDownload" onclick="downloadCard()">⬇ DOWNLOAD</button>
-      <button class="btn-action visible" id="btnDownloadVideo" onclick="downloadVideo()" style="display:none;">⬇ DOWNLOAD VIDEO</button>
-      <button class="btn-action" id="btnCopy" onclick="copyCard()">📋 COPY</button>
+      <div class="btn-group">
+        <button class="btn-generate" id="btnGenerate" onclick="handleGenerate()">GENERATE</button>
+        <button class="btn-action" id="btnDownload" onclick="downloadCard()">⬇ DOWNLOAD</button>
+        <button class="btn-action visible" id="btnDownloadVideo" onclick="downloadVideo()" style="display:none;">⬇ DOWNLOAD VIDEO</button>
+        <button class="btn-action" id="btnCopy" onclick="copyCard()">📋 COPY</button>
+      </div>
     </div>
   </div>
 
