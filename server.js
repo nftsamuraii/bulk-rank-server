@@ -11,6 +11,17 @@ const app    = express();
 const upload = multer({ dest: os.tmpdir() });
 
 app.use(cors());
+
+// Set permissive CSP to allow canvas, WebAudio, MediaRecorder
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy',
+    "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; " +
+    "media-src * blob: data:; " +
+    "connect-src * blob: data:;"
+  );
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/convert', upload.single('video'), (req, res) => {
