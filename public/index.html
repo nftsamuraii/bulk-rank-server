@@ -123,7 +123,7 @@
       <div class="btn-group">
         <button class="btn-generate" id="btnGenerate" onclick="handleGenerate()">GENERATE</button>
         <button class="btn-action" id="btnDownload" onclick="downloadCard()">⬇ DOWNLOAD</button>
-        <button class="btn-action visible" id="btnDownloadVideo" onclick="downloadVideo()" style="display:none;">⬇ DOWNLOAD VIDEO</button>
+        <button class="btn-action" id="btnDownloadVideo" onclick="downloadVideo()" disabled style="opacity:0.3;cursor:not-allowed;display:none;">⬇ DOWNLOAD VIDEO</button>
         <button class="btn-action" id="btnCopy" onclick="copyCard()">📋 COPY</button>
       </div>
     </div>
@@ -384,6 +384,9 @@ function switchMode(mode) {
   currentMode = mode;
   document.getElementById('photoMode').style.display = mode === 'photo' ? 'block' : 'none';
   document.getElementById('videoMode').style.display = mode === 'video' ? 'block' : 'none';
+  document.getElementById('btnDownload').style.display = mode === 'photo' ? 'block' : 'none';
+  document.getElementById('btnCopy').style.display = mode === 'photo' ? 'block' : 'none';
+  document.getElementById('btnDownloadVideo').style.display = mode === 'video' ? 'block' : 'none';
   document.getElementById('btnModePhoto').style.background = mode === 'photo' ? '#c8b882' : 'transparent';
   document.getElementById('btnModePhoto').style.color = mode === 'photo' ? '#0a0a0a' : '#888';
   document.getElementById('btnModePhoto').style.borderColor = mode === 'photo' ? '#c8b882' : '#444';
@@ -402,7 +405,10 @@ function switchMode(mode) {
 
   // Reset download video button when switching modes
   const dlVid = document.getElementById('btnDownloadVideo');
-  dlVid.style.display = 'none';
+  dlVid.disabled = true;
+  dlVid.style.opacity = '0.3';
+  dlVid.style.cursor = 'not-allowed';
+  dlVid.classList.remove('visible');
 }
 
 // ── Load video background ──────────────────────────────────
@@ -578,7 +584,9 @@ async function generateVideo() {
     bgVideoEl.loop = true;
     bgVideoEl.pause();
     const dlBtn = document.getElementById('btnDownloadVideo');
-    dlBtn.style.display = 'block';
+    dlBtn.disabled = false;
+    dlBtn.style.opacity = '1';
+    dlBtn.style.cursor = 'pointer';
     dlBtn.classList.add('visible');
     btnGen.disabled = false;
     btnGen.textContent = '🎬 GENERATE VIDEO';
