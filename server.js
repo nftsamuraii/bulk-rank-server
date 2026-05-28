@@ -41,8 +41,8 @@ app.post('/convert', upload.single('video'), (req, res) => {
   const cmd = ffmpeg(inputPath)
     .outputOptions([
       '-c:v libx264',
-      '-preset fast',
-      '-crf 16',
+      '-preset medium',
+      '-crf 14',
       '-b:v 14M',
       '-maxrate 18M',
       '-bufsize 36M',
