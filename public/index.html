@@ -412,8 +412,15 @@ function loadVideo(e) {
   bgVideoEl = document.createElement('video');
   bgVideoEl.src = URL.createObjectURL(file);
   bgVideoEl.loop = true;
-  bgVideoEl.muted = true;
+  bgVideoEl.muted = false;
   bgVideoEl.playsInline = true;
+  bgVideoEl.crossOrigin = 'anonymous';
+
+  // Init AudioContext once here so it works during recording
+  if (!window._audioCtx) {
+    window._audioCtx = new AudioContext();
+    window._audioDest = window._audioCtx.createMediaStreamDestination();
+  }
   bgVideoEl.onloadedmetadata = () => {
     document.getElementById('videoIcon').style.display = 'none';
     document.getElementById('videoLabel').innerHTML = '<span class="loaded">✓ ' + file.name + '</span><br><span style="color:#555;font-size:10px;">Click GENERATE VIDEO below</span>';
@@ -522,19 +529,28 @@ async function generateVideo() {
   // Capture canvas video stream
   const canvasStream = canvas.captureStream(60);
 
-  // Capture audio from background video
+  // Capture audio from background video using pre-initialized AudioContext
   let stream;
   try {
-    const audioCtx = new AudioContext();
-    const source = audioCtx.createMediaElementSource(bgVideoEl);
-    const dest = audioCtx.createMediaStreamDestination();
-    source.connect(dest);
-    source.connect(audioCtx.destination); // keep playing through speakers
+    const audioCtx = window._audioCtx;
+    const dest = window._audioDest;
+    audioCtx.resume();
+
+    // Connect source only once
+    if (!bgVideoEl._audioConnected) {
+      const source = audioCtx.createMediaElementSource(bgVideoEl);
+      source.connect(dest);
+      source.connect(audioCtx.destination);
+      bgVideoEl._audioConnected = true;
+    }
+
     const audioTrack = dest.stream.getAudioTracks()[0];
     const videoTrack = canvasStream.getVideoTracks()[0];
-    stream = new MediaStream([videoTrack, audioTrack]);
+    stream = audioTrack
+      ? new MediaStream([videoTrack, audioTrack])
+      : canvasStream;
   } catch(e) {
-    console.warn('Audio capture failed, using video only:', e);
+    console.warn('Audio capture failed:', e);
     stream = canvasStream;
   }
   recordedChunks = [];
