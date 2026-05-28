@@ -484,7 +484,15 @@ async function generateVideo() {
   ];
 
   function drawFrame() {
-    ctx.drawImage(bgVideoEl, 0, 0, W, H);
+    // Cover crop — зберігає пропорції відео, обрізає по центру
+    const vw = bgVideoEl.videoWidth;
+    const vh = bgVideoEl.videoHeight;
+    const scale = Math.max(W / vw, H / vh);
+    const sw = W / scale;
+    const sh = H / scale;
+    const sx = (vw - sw) / 2;
+    const sy = (vh - sh) / 2;
+    ctx.drawImage(bgVideoEl, sx, sy, sw, sh, 0, 0, W, H);
     if (logo) {
       const logoH = Math.round(H * 0.09);
       const logoW = Math.round(logoH * (logo.naturalWidth / logo.naturalHeight));
